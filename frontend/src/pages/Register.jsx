@@ -2,27 +2,40 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Footer from '../components/Footer';
 
-export default function Login() {
+export default function Register() {
+  const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
+  const handleRegister = async (e) => {
     e.preventDefault();
     setError(null);
     setLoading(true);
 
+    if (password !== confirmPassword) {
+      setError("Passwords don't match!");
+      setLoading(false);
+      return;
+    }
+
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api';
-      const response = await fetch(`${apiUrl}/auth/login`, {
+      const response = await fetch(`${apiUrl}/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ 
+          name, 
+          email, 
+          password,
+          password_confirmation: confirmPassword 
+        }),
       });
 
       const data = await response.json();
@@ -35,10 +48,16 @@ export default function Login() {
         // Redirect to dashboard
         navigate('/dashboard');
       } else {
-        setError(data.message || 'Login failed. Please check your credentials.');
+        if (data.errors) {
+          // Handle Laravel validation errors (usually an object)
+          const firstError = Object.values(data.errors)[0][0];
+          setError(firstError);
+        } else {
+          setError(data.message || 'Registration failed. Please try again.');
+        }
       }
     } catch (err) {
-      console.error('Login error:', err);
+      console.error('Registration error:', err);
       setError('A network error occurred. Please try again.');
     } finally {
       setLoading(false);
@@ -53,7 +72,7 @@ export default function Login() {
   return (
     <div className="flex flex-col min-h-screen">
       
-      <main className="flex-1 flex flex-col items-center justify-center pt-24 px-md relative circuit-bg overflow-hidden w-full">
+      <main className="flex-1 flex flex-col items-center justify-center pt-24 px-md relative circuit-bg overflow-hidden w-full py-xl">
         {/* Decorative Elements */}
         <div className="absolute top-1/4 -left-20 w-96 h-96 bg-primary/10 blur-[120px] rounded-full animate-pulse-slow"></div>
         <div className="absolute bottom-1/4 -right-20 w-96 h-96 bg-secondary/5 blur-[120px] rounded-full animate-pulse-slow"></div>
@@ -62,23 +81,36 @@ export default function Login() {
           <div className="glass-panel p-lg rounded-2xl border border-primary/20 shadow-lg flex flex-col items-center">
             <div className="mb-md">
               <span className="material-symbols-outlined text-[48px] text-primary" style={{ fontVariationSettings: "'FILL' 1" }}>
-                lock_person
+                person_add
               </span>
             </div>
             <h1 className="font-display-lg text-display-lg-mobile md:text-[32px] text-primary mb-sm leading-tight text-center">
-              Welcome Back
+              Create Account
             </h1>
             <p className="font-body-md text-on-surface-variant text-center mb-lg">
-              Sign in to ContractMind AI to continue.
+              Join ContractMind AI and start analyzing smart contracts.
             </p>
 
-            <form onSubmit={handleLogin} className="w-full flex flex-col gap-md">
+            <form onSubmit={handleRegister} className="w-full flex flex-col gap-md">
               {error && (
                 <div className="bg-error/10 border border-error/20 text-error p-sm rounded-lg text-sm text-center">
                   {error}
                 </div>
               )}
-              
+
+              <div className="flex flex-col gap-xs">
+                <label className="font-label-sm text-on-surface-variant uppercase tracking-widest" htmlFor="name">Full Name</label>
+                <input
+                  type="text"
+                  id="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full bg-surface-container p-sm rounded-lg border border-outline-variant/30 focus:border-primary focus:outline-none text-on-surface placeholder:text-on-surface-variant/50 transition-colors"
+                  placeholder="John Doe"
+                  required
+                />
+              </div>
+
               <div className="flex flex-col gap-xs">
                 <label className="font-label-sm text-on-surface-variant uppercase tracking-widest" htmlFor="email">Email</label>
                 <input
@@ -93,15 +125,25 @@ export default function Login() {
               </div>
 
               <div className="flex flex-col gap-xs">
-                <div className="flex justify-between items-center">
-                  <label className="font-label-sm text-on-surface-variant uppercase tracking-widest" htmlFor="password">Password</label>
-                  <a href="#" className="font-label-sm text-primary hover:text-primary-fixed transition-colors">Forgot?</a>
-                </div>
+                <label className="font-label-sm text-on-surface-variant uppercase tracking-widest" htmlFor="password">Password</label>
                 <input
                   type="password"
                   id="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
+                  className="w-full bg-surface-container p-sm rounded-lg border border-outline-variant/30 focus:border-primary focus:outline-none text-on-surface placeholder:text-on-surface-variant/50 transition-colors"
+                  placeholder="••••••••"
+                  required
+                />
+              </div>
+
+              <div className="flex flex-col gap-xs">
+                <label className="font-label-sm text-on-surface-variant uppercase tracking-widest" htmlFor="confirmPassword">Confirm Password</label>
+                <input
+                  type="password"
+                  id="confirmPassword"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
                   className="w-full bg-surface-container p-sm rounded-lg border border-outline-variant/30 focus:border-primary focus:outline-none text-on-surface placeholder:text-on-surface-variant/50 transition-colors"
                   placeholder="••••••••"
                   required
@@ -116,10 +158,10 @@ export default function Login() {
                 {loading ? (
                   <>
                     <span className="material-symbols-outlined animate-spin text-[20px]">sync</span>
-                    Signing In...
+                    Signing Up...
                   </>
                 ) : (
-                  'Sign In'
+                  'Sign Up'
                 )}
               </button>
             </form>
@@ -139,7 +181,7 @@ export default function Login() {
             </button>
             
             <p className="font-body-md text-on-surface-variant text-center mt-lg text-sm">
-              Don't have an account? <Link to="/register" className="text-primary hover:text-primary-fixed transition-colors font-bold">Sign up</Link>
+              Already have an account? <Link to="/login" className="text-primary hover:text-primary-fixed transition-colors font-bold">Sign In</Link>
             </p>
           </div>
         </div>
