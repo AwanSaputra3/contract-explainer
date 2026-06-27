@@ -6,6 +6,11 @@ from crewai import Crew, Process
 from agents import ContractAgents
 from tasks import ContractTasks
 
+# Force utf-8 for Windows console
+if sys.platform == "win32":
+    sys.stdout.reconfigure(encoding='utf-8')
+    sys.stderr.reconfigure(encoding='utf-8')
+
 # Load Laravel's .env file to get OPENROUTER_API_KEY
 # The .env file is one directory up in backend/
 env_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'backend', '.env'))
@@ -30,7 +35,7 @@ def analyze_contract(contract_code):
         agents=[parser, security, gas],
         tasks=[parse_task, security_task, gas_task],
         process=Process.sequential,
-        verbose=False # Set to True for debugging in console
+        verbose=False
     )
 
     # Start the analysis
@@ -41,9 +46,9 @@ def analyze_contract(contract_code):
     # We can also capture individual task outputs if needed.
     output = {
         "status": "success",
-        "parser_output": parse_task.output.raw_output if hasattr(parse_task, 'output') else "N/A",
-        "security_output": security_task.output.raw_output if hasattr(security_task, 'output') else "N/A",
-        "gas_output": gas_task.output.raw_output if hasattr(gas_task, 'output') else "N/A",
+        "parser_output": parse_task.output.raw if hasattr(parse_task, 'output') else "N/A",
+        "security_output": security_task.output.raw if hasattr(security_task, 'output') else "N/A",
+        "gas_output": gas_task.output.raw if hasattr(gas_task, 'output') else "N/A",
         "final_summary": str(result)
     }
 

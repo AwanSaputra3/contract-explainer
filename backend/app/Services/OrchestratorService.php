@@ -139,16 +139,33 @@ class OrchestratorService extends BaseAgentService
         }
 
         // Try using python or python3
-        $process = new \Symfony\Component\Process\Process(['python', $scriptPath, $analysis->source_value]);
+        $pythonCmd = 'python';
+        if (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN') {
+            $localAppData = getenv('LOCALAPPDATA');
+            if ($localAppData && file_exists($localAppData . '\Programs\Python\Python312\python.exe')) {
+                $pythonCmd = $localAppData . '\Programs\Python\Python312\python.exe';
+            }
+        }
+        
+        $process = new \Symfony\Component\Process\Process([$pythonCmd, $scriptPath, $analysis->source_value]);
         $process->setTimeout(300); // 5 mins
 
         try {
             $process->run();
             if ($process->isSuccessful()) {
-                $output = json_decode($process->getOutput(), true);
-                if (isset($output['status']) && $output['status'] === 'success') {
-                    $this->log($task, 'CrewAI execution successful.');
-                    return $output;
+                $rawOut = $process->getOutput();
+                // Find the first { and last } to extract JSON
+                $start = strpos($rawOut, '{');
+                $end = strrpos($rawOut, '}');
+                
+                if ($start !== false && $end !== false) {
+                    $jsonStr = substr($rawOut, $start, $end - $start + 1);
+                    $output = json_decode($jsonStr, true);
+                    
+                    if (isset($output['status']) && $output['status'] === 'success') {
+                        $this->log($task, 'CrewAI execution successful.');
+                        return $output;
+                    }
                 }
             }
             $this->log($task, 'CrewAI failed or returned invalid JSON. Output: ' . $process->getErrorOutput() . ' | ' . $process->getOutput());
