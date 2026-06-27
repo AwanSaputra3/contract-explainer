@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AnalysisController;
 use App\Http\Controllers\AuthController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -23,6 +24,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', function (Request $request) {
         return $request->user()->loadCount(['analyses', 'chatSessions']);
     });
+
+    // Analysis
+    Route::get('/analyses',              [AnalysisController::class, 'index']);
+    Route::post('/analyses',             [AnalysisController::class, 'create']);
+    Route::get('/analyses/{id}',         [AnalysisController::class, 'show']);
+    Route::post('/analyses/{id}/analyze',[AnalysisController::class, 'analyze']);
+    Route::delete('/analyses/{id}',      [AnalysisController::class, 'destroy']);
+    Route::post('/analyses/{id}/chat',   [AnalysisController::class, 'chatAsk']);
+    Route::get('/analyses/{id}/chat',    [AnalysisController::class, 'chatHistory']);
 });
 
 // ─── Admin Routes ──────────────────────────────────
