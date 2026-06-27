@@ -5,28 +5,25 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class AgentTask extends Model
+class PaymentTransaction extends Model
 {
     protected $fillable = [
         'analysis_id',
-        'agent_name',
-        'input_payload',
-        'output_payload',
-        'retry_count',
-        'priority',
+        'user_id',
+        'tx_hash',
+        'amount',
+        'currency',
         'status',
-        'started_at',
-        'completed_at',
-        'error_message',
+        'from_address',
+        'to_address',
+        'confirmed_at',
     ];
 
     protected function casts(): array
     {
         return [
-            'input_payload' => 'array',
-            'output_payload' => 'array',
-            'started_at' => 'datetime',
-            'completed_at' => 'datetime',
+            'amount' => 'decimal:6',
+            'confirmed_at' => 'datetime',
         ];
     }
 
@@ -34,5 +31,9 @@ class AgentTask extends Model
     {
         return $this->belongsTo(Analysis::class);
     }
-}
 
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+}
