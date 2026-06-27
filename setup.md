@@ -8,16 +8,16 @@ Dokumen ini berisi langkah-langkah untuk menyiapkan *environment* lokal Anda aga
 
 Laravel membutuhkan database untuk menyimpan data aplikasi. 
 
-1. Pastikan Anda sudah menginstal aplikasi database seperti **MySQL** atau **PostgreSQL** (Anda bisa menggunakan XAMPP, Laragon, PostgreSQL lokal, atau Docker).
-2. Buat sebuah database kosong baru, misalnya dengan nama `contract_explainer`.
+1. Pastikan Anda sudah menginstal aplikasi database **PostgreSQL** (bisa melalui installer resmi, pgAdmin, atau Docker).
+2. Buka antarmuka PostgreSQL Anda (misalnya pgAdmin) dan buat sebuah database kosong baru bernama `contract_explainer`.
 3. Buka folder `backend` dan cari file bernama `.env` (file ini otomatis terbuat saat instalasi Laravel). 
-4. Buka file `.env` tersebut dan sesuaikan bagian koneksi database dengan pengaturan di komputer Anda:
+4. Buka file `.env` tersebut dan sesuaikan bagian koneksi database dengan pengaturan PostgreSQL Anda:
    ```env
-   DB_CONNECTION=mysql
+   DB_CONNECTION=pgsql
    DB_HOST=127.0.0.1
-   DB_PORT=3306
+   DB_PORT=5432
    DB_DATABASE=contract_explainer
-   DB_USERNAME=root
+   DB_USERNAME=postgres
    DB_PASSWORD=
    ```
    *(Ubah DB_USERNAME dan DB_PASSWORD sesuai dengan pengaturan database Anda).*
