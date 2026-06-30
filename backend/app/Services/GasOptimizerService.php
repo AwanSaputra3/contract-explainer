@@ -5,13 +5,16 @@ namespace App\Services;
 use App\Models\Analysis;
 use App\Models\AgentTask;
 use App\Models\GasOptimization;
+use App\Traits\HasHermesAgent;
 
 /**
  * TSK-013 + TSK-014: Ahli efisiensi dan optimasi biaya.
- * Identifikasi pola boros gas & estimasi penghematan.
+ * Identifikasi pola boros gas & estimasi penghematan menggunakan Hermes LLM.
  */
 class GasOptimizerService extends BaseAgentService
 {
+    use HasHermesAgent;
+
     public function agentName(): string
     {
         return 'GasOptimizer';
@@ -19,50 +22,56 @@ class GasOptimizerService extends BaseAgentService
 
     public function execute(Analysis $analysis, AgentTask $task): array
     {
-        $this->log($task, 'Analyzing gas optimization opportunities...');
+        $this->log($task, 'Analyzing gas optimization opportunities via Hermes...');
 
         $contracts = $analysis->contracts;
         $optimizations = [];
-        $rules = $this->getRules();
+        $totalOpts = 0;
+
+        $systemPrompt = "You are an expert in EVM opcodes and gas mechanics. You know every trick in the book to save Wei on transactions, from packing storage variables to optimizing memory allocation.";
 
         foreach ($contracts as $contract) {
             $code = $contract->source_code ?? '';
-            foreach ($rules as $rule) {
-                foreach ($rule['patterns'] as $pattern) {
-                    if (preg_match('/' . $pattern . '/i', $code, $m, PREG_OFFSET_CAPTURE)) {
-                        $line = substr_count(substr($code, 0, $m[0][1]), "\n") + 1;
+            
+            $userPrompt = "Review the following smart contract code for gas optimization opportunities:\n\n" . $code . "\n\n" .
+            "Look for:\n- Unnecessary storage reads/writes\n- Inefficient loops\n- Variable packing opportunities\n- calldata vs memory usage\n- Use of immutable/constant\n- Custom errors vs revert strings\n- Short-circuiting opportunities\n- Event emission optimization\n\n" .
+            "Return a JSON array of objects. Each object must have these exact keys:\n" .
+            "1. 'title' (short string)\n" .
+            "2. 'description' (detailed explanation string)\n" .
+            "3. 'location' (line number or function name)\n" .
+            "4. 'estimated_savings' (approximate gas saved, e.g., '~2000 gas')\n\n" .
+            "If no optimizations are found, return an empty array [].";
+
+            try {
+                $result = $this->callHermes($systemPrompt, $userPrompt, true);
+                
+                if (is_array($result)) {
+                    foreach ($result as $optData) {
+                        if (!isset($optData['title'])) continue;
+                        
                         $opt = GasOptimization::create([
                             'analysis_id'      => $analysis->id,
                             'contract_id'      => $contract->id,
-                            'description'      => $rule['description'],
-                            'location'         => "Line {$line}: {$m[0][0]}",
-                            'estimated_savings' => $rule['estimated_savings'],
+                            'description'      => $optData['description'] ?? '',
+                            'location'         => $optData['location'] ?? '',
+                            'estimated_savings' => $optData['estimated_savings'] ?? '',
                         ]);
                         $optimizations[] = $opt;
+                        $totalOpts++;
                     }
                 }
+                $this->log($task, "Gas optimization completed for contract: {$contract->contract_name}");
+            } catch (\Exception $e) {
+                $this->log($task, "Failed gas optimization for contract: {$contract->contract_name}. Error: " . $e->getMessage());
             }
         }
 
-        $this->log($task, 'Gas optimization done. ' . count($optimizations) . ' suggestions.');
+        $this->log($task, 'Gas optimization done. ' . $totalOpts . ' suggestions.');
 
         return [
-            'optimizations_count' => count($optimizations),
-            'optimizations'       => $optimizations,
-        ];
-    }
-
-    private function getRules(): array
-    {
-        return [
-            ['patterns' => ['\bstring\b.*\bmemory\b'], 'description' => 'Use calldata instead of memory for external function string params', 'estimated_savings' => '~200-500 gas per call'],
-            ['patterns' => ['for\s*\(.*\.length'], 'description' => 'Cache array length outside loop to avoid repeated SLOAD', 'estimated_savings' => '~100 gas per iteration'],
-            ['patterns' => ['\buint\s+(\w+)\s*=[^;]*;.*\1\s*\+\+'], 'description' => 'Use ++i (pre-increment) instead of i++ for gas savings', 'estimated_savings' => '~5 gas per use'],
-            ['patterns' => ['\bpublic\s+(\w+)\s+(\w+)\s*;'], 'description' => 'Mark state variable as private + getter if not needed public', 'estimated_savings' => '~2000 gas on deploy'],
-            ['patterns' => ['\b(\w+)\s*=\s*0\s*;'], 'description' => 'Default value is 0; explicit initialization wastes gas', 'estimated_savings' => '~100 gas per var'],
-            ['patterns' => ['\b(\w+)\.push\(', '\b(\w+)\s*=\s*new\s'], 'description' => 'Consider fixed-size array or mapping to reduce storage cost', 'estimated_savings' => '~20000 gas on deploy'],
-            ['patterns' => ['\bconstant\b'], 'description' => 'Great! Using constant saves gas ✓', 'estimated_savings' => 'already optimized'],
-            ['patterns' => ['\bimmutable\b'], 'description' => 'Great! Using immutable saves gas ✓', 'estimated_savings' => 'already optimized'],
+            'optimizations_count' => $totalOpts,
+            'optimizations'       => array_map(function($o) { return $o->toArray(); }, $optimizations),
         ];
     }
 }
+

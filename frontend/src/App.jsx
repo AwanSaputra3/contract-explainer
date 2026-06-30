@@ -10,6 +10,7 @@ import LogicFlow from './pages/LogicFlow';
 import ChainStatus from './pages/ChainStatus';
 import Settings from './pages/Settings';
 import Support from './pages/Support';
+import TestAgent from './pages/TestAgent';
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
         <Route path="/chain" element={<ChainStatus />} />
         <Route path="/settings" element={<Settings />} />
         <Route path="/support" element={<Support />} />
+        <Route path="/test" element={<TestAgent />} />
         {/* We can map /reports and /networks to dashboard or placeholders as needed */}
         <Route path="/reports" element={<Dashboard />} />
         <Route path="/networks" element={<Dashboard />} />
